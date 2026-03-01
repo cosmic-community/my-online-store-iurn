@@ -11,8 +11,27 @@ export default function ProductCard({ product }: ProductCardProps) {
   const hasSale = salePrice && price && salePrice < price
   const discountPercent = hasSale ? Math.round(((price - salePrice) / price) * 100) : 0
   const image = product.metadata?.image
-  const inventoryStatus = product.metadata?.inventory_status || ''
   const category = product.metadata?.category
+
+  // Changed: Safely extract inventory_status as a string
+  // select-dropdown metafields can return an object with key/value or a plain string
+  const rawInventoryStatus = product.metadata?.inventory_status
+  const inventoryStatus: string =
+    typeof rawInventoryStatus === 'string'
+      ? rawInventoryStatus
+      : rawInventoryStatus && typeof rawInventoryStatus === 'object' && 'value' in rawInventoryStatus
+        ? String((rawInventoryStatus as { value: string }).value)
+        : rawInventoryStatus && typeof rawInventoryStatus === 'object' && 'key' in rawInventoryStatus
+          ? String((rawInventoryStatus as { key: string }).key)
+          : ''
+
+  // Changed: Safely extract category title as a string
+  const categoryTitle: string =
+    typeof category === 'string'
+      ? category
+      : category && typeof category === 'object' && 'title' in category
+        ? String(category.title)
+        : ''
 
   return (
     <Link href={`/products/${product.slug}`} className="group">
@@ -60,9 +79,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         {/* Content */}
         <div className="p-4">
-          {category && (
+          {categoryTitle && (
             <span className="text-xs font-medium text-brand-600 uppercase tracking-wider">
-              {category.title}
+              {categoryTitle}
             </span>
           )}
           <h3 className="text-base font-semibold text-gray-900 mt-1 group-hover:text-brand-600 transition-colors line-clamp-2">

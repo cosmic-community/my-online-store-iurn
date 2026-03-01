@@ -9,7 +9,12 @@ interface ReviewCardProps {
 
 export default function ReviewCard({ review, showProduct = true }: ReviewCardProps) {
   const rating = review.metadata?.rating || 0
-  const reviewerName = review.metadata?.reviewer_name || 'Anonymous'
+  // Changed: Safely extract reviewer_name as a string
+  const rawReviewerName = review.metadata?.reviewer_name
+  const reviewerName: string =
+    typeof rawReviewerName === 'string' && rawReviewerName.length > 0
+      ? rawReviewerName
+      : 'Anonymous'
   const comment = review.metadata?.comment || ''
   const product = review.metadata?.product
 
@@ -41,7 +46,7 @@ export default function ReviewCard({ review, showProduct = true }: ReviewCardPro
       )}
 
       {/* Linked Product */}
-      {showProduct && product && (
+      {showProduct && product && typeof product === 'object' && 'slug' in product && (
         <Link
           href={`/products/${product.slug}`}
           className="flex items-center gap-3 pt-4 border-t border-gray-100 group"
