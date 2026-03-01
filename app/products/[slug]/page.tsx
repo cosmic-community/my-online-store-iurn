@@ -27,6 +27,36 @@ export async function generateStaticParams() {
   return products.map((product) => ({ slug: product.slug }))
 }
 
+// Changed: Helper to safely extract a string from a select-dropdown metafield (object or string)
+function extractDropdownString(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (value && typeof value === 'object' && 'value' in value) {
+    return String((value as { value: string }).value)
+  }
+  if (value && typeof value === 'object' && 'key' in value) {
+    return String((value as { key: string }).key)
+  }
+  return ''
+}
+
+// Changed: Helper to safely extract a numeric rating from a select-dropdown metafield
+function extractRatingNumber(value: unknown): number {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value)
+    return isNaN(parsed) ? 0 : parsed
+  }
+  if (value && typeof value === 'object' && 'value' in value) {
+    const parsed = parseFloat(String((value as { value: string }).value))
+    return isNaN(parsed) ? 0 : parsed
+  }
+  if (value && typeof value === 'object' && 'key' in value) {
+    const parsed = parseFloat(String((value as { key: string }).key))
+    return isNaN(parsed) ? 0 : parsed
+  }
+  return 0
+}
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params
   const product = await getProductBySlug(slug)
@@ -41,13 +71,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const salePrice = product.metadata?.sale_price
   const hasSale = salePrice && price && salePrice < price
   const discountPercent = hasSale ? Math.round(((price - salePrice) / price) * 100) : 0
-  const inventoryStatus = product.metadata?.inventory_status || 'Unknown'
+  // Changed: Safely extract inventory_status as a string from select-dropdown object
+  const inventoryStatus = extractDropdownString(product.metadata?.inventory_status) || 'Unknown'
   const category = product.metadata?.category
   const mainImage = product.metadata?.image
   const gallery = product.metadata?.gallery || []
 
+  // Changed: Safely extract rating as a number from select-dropdown object
   const averageRating = reviews.length > 0
-    ? reviews.reduce((sum, r) => sum + (r.metadata?.rating || 0), 0) / reviews.length
+    ? reviews.reduce((sum, r) => sum + extractRatingNumber(r.metadata?.rating), 0) / reviews.length
     : 0
 
   return (
@@ -107,7 +139,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
         {/* Info Section */}
         <div>
-          {category && (
+          {category && typeof category === 'object' && 'slug' in category && (
             <Link
               href={`/categories/${category.slug}`}
               className="inline-block text-sm font-medium text-brand-600 bg-brand-50 px-3 py-1 rounded-full hover:bg-brand-100 transition-colors mb-4"

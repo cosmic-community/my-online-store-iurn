@@ -7,8 +7,27 @@ interface ReviewCardProps {
   showProduct?: boolean
 }
 
+// Changed: Helper to safely extract a numeric rating from a select-dropdown metafield
+function extractRatingNumber(value: unknown): number {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value)
+    return isNaN(parsed) ? 0 : parsed
+  }
+  if (value && typeof value === 'object' && 'value' in value) {
+    const parsed = parseFloat(String((value as { value: string }).value))
+    return isNaN(parsed) ? 0 : parsed
+  }
+  if (value && typeof value === 'object' && 'key' in value) {
+    const parsed = parseFloat(String((value as { key: string }).key))
+    return isNaN(parsed) ? 0 : parsed
+  }
+  return 0
+}
+
 export default function ReviewCard({ review, showProduct = true }: ReviewCardProps) {
-  const rating = review.metadata?.rating || 0
+  // Changed: Safely extract rating as a number from select-dropdown object
+  const rating = extractRatingNumber(review.metadata?.rating)
   // Changed: Safely extract reviewer_name as a string
   const rawReviewerName = review.metadata?.reviewer_name
   const reviewerName: string =
