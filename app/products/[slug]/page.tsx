@@ -30,11 +30,12 @@ export async function generateStaticParams() {
 // Changed: Helper to safely extract a string from a select-dropdown metafield (object or string)
 function extractDropdownString(value: unknown): string {
   if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value) // Changed: handle number/boolean
   if (value && typeof value === 'object' && 'value' in value) {
-    return String((value as { value: string }).value)
+    return String((value as { value: unknown }).value ?? '') // Changed: coerce with fallback
   }
   if (value && typeof value === 'object' && 'key' in value) {
-    return String((value as { key: string }).key)
+    return String((value as { key: unknown }).key ?? '') // Changed: coerce with fallback
   }
   return ''
 }
@@ -57,6 +58,12 @@ function extractRatingNumber(value: unknown): number {
   return 0
 }
 
+// Changed: Helper to safely call toLowerCase on any value
+function safeToLowerCase(value: unknown): string {
+  if (typeof value === 'string') return value.toLowerCase()
+  return String(value ?? '').toLowerCase()
+}
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params
   const product = await getProductBySlug(slug)
@@ -73,6 +80,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const discountPercent = hasSale ? Math.round(((price - salePrice) / price) * 100) : 0
   // Changed: Safely extract inventory_status as a string from select-dropdown object
   const inventoryStatus = extractDropdownString(product.metadata?.inventory_status) || 'Unknown'
+  // Changed: Pre-compute the lowercased version to avoid calling .toLowerCase() on a non-string
+  const inventoryStatusLower = safeToLowerCase(inventoryStatus)
   const category = product.metadata?.category
   const mainImage = product.metadata?.image
   const gallery = product.metadata?.gallery || []
@@ -178,21 +187,22 @@ export default async function ProductPage({ params }: ProductPageProps) {
           </div>
 
           {/* Inventory Status */}
+          {/* Changed: Use pre-computed inventoryStatusLower instead of calling .toLowerCase() inline */}
           <div className="flex items-center gap-2 mb-8">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
-                inventoryStatus.toLowerCase().includes('in stock') || inventoryStatus.toLowerCase().includes('in_stock') || inventoryStatus.toLowerCase().includes('available')
+                inventoryStatusLower.includes('in stock') || inventoryStatusLower.includes('in_stock') || inventoryStatusLower.includes('available')
                   ? 'bg-green-100 text-green-700'
-                  : inventoryStatus.toLowerCase().includes('low') || inventoryStatus.toLowerCase().includes('limited')
+                  : inventoryStatusLower.includes('low') || inventoryStatusLower.includes('limited')
                     ? 'bg-yellow-100 text-yellow-700'
                     : 'bg-red-100 text-red-700'
               }`}
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  inventoryStatus.toLowerCase().includes('in stock') || inventoryStatus.toLowerCase().includes('in_stock') || inventoryStatus.toLowerCase().includes('available')
+                  inventoryStatusLower.includes('in stock') || inventoryStatusLower.includes('in_stock') || inventoryStatusLower.includes('available')
                     ? 'bg-green-500'
-                    : inventoryStatus.toLowerCase().includes('low') || inventoryStatus.toLowerCase().includes('limited')
+                    : inventoryStatusLower.includes('low') || inventoryStatusLower.includes('limited')
                       ? 'bg-yellow-500'
                       : 'bg-red-500'
                 }`}

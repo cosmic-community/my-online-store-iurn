@@ -5,6 +5,12 @@ interface ProductCardProps {
   product: Product
 }
 
+// Changed: Helper to safely call toLowerCase on any value
+function safeToLowerCase(value: unknown): string {
+  if (typeof value === 'string') return value.toLowerCase()
+  return String(value ?? '').toLowerCase()
+}
+
 export default function ProductCard({ product }: ProductCardProps) {
   const price = product.metadata?.price
   const salePrice = product.metadata?.sale_price
@@ -20,10 +26,13 @@ export default function ProductCard({ product }: ProductCardProps) {
     typeof rawInventoryStatus === 'string'
       ? rawInventoryStatus
       : rawInventoryStatus && typeof rawInventoryStatus === 'object' && 'value' in rawInventoryStatus
-        ? String((rawInventoryStatus as { value: string }).value)
+        ? String((rawInventoryStatus as { value: unknown }).value ?? '')
         : rawInventoryStatus && typeof rawInventoryStatus === 'object' && 'key' in rawInventoryStatus
-          ? String((rawInventoryStatus as { key: string }).key)
+          ? String((rawInventoryStatus as { key: unknown }).key ?? '')
           : ''
+
+  // Changed: Pre-compute lowercased version to avoid calling .toLowerCase() on non-strings
+  const inventoryStatusLower = safeToLowerCase(inventoryStatus)
 
   // Changed: Safely extract category title as a string
   const categoryTitle: string =
@@ -62,12 +71,13 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
 
           {/* Inventory Badge */}
+          {/* Changed: Use pre-computed inventoryStatusLower */}
           {inventoryStatus && (
             <span
               className={`absolute top-3 right-3 px-2.5 py-1 text-xs font-medium rounded-full ${
-                inventoryStatus.toLowerCase().includes('in stock') || inventoryStatus.toLowerCase().includes('in_stock') || inventoryStatus.toLowerCase().includes('available')
+                inventoryStatusLower.includes('in stock') || inventoryStatusLower.includes('in_stock') || inventoryStatusLower.includes('available')
                   ? 'bg-green-100 text-green-700'
-                  : inventoryStatus.toLowerCase().includes('low') || inventoryStatus.toLowerCase().includes('limited')
+                  : inventoryStatusLower.includes('low') || inventoryStatusLower.includes('limited')
                     ? 'bg-yellow-100 text-yellow-700'
                     : 'bg-red-100 text-red-700'
               }`}
